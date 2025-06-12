@@ -1,3 +1,5 @@
+import uuid
+
 import graphene as graphene
 from django.db import transaction
 from django.utils.translation import gettext as _
@@ -19,7 +21,8 @@ from worker_voucher.apps import WorkerVoucherConfig
 from worker_voucher.models import WorkerVoucher, WorkerGroup
 from worker_voucher.services import WorkerVoucherService, GroupOfWorkerService, validate_acquire_unassigned_vouchers, \
     validate_acquire_assigned_vouchers, validate_assign_vouchers, create_assigned_voucher, create_voucher_bill, \
-    create_unassigned_voucher, assign_voucher, economic_unit_user_filter, check_existing_active_vouchers, VoucherFormDraftService
+    create_unassigned_voucher, assign_voucher, economic_unit_user_filter, check_existing_active_vouchers, \
+    VoucherFormDraftService, validate_unassign_vouchers, unassign_voucher
 
 
 class CreateWorkerMutation(CreateInsureeMutation):
@@ -397,6 +400,52 @@ class AssignVouchersMutation(BaseMutation):
         return None
 
     class Input(AssignVouchersMutationInput):
+        pass
+
+
+class UnassignVouchersMutationInput(OpenIMISMutation.Input):
+    id_ = graphene.ID(name="id")
+    ids = graphene.List(graphene.ID)
+    economic_unit_code = graphene.String(required=True)
+
+
+class UnassignVouchersMutation(BaseMutation):
+    _mutation_class = "UnassignVouchersMutation"
+    _mutation_module = "worker_voucher"
+    _model = WorkerVoucher
+
+    @classmethod
+    def _validate_mutation(cls, user, economic_unit_code: int, id_: str | None = None, ids: list[str] | None = None,**_):
+        try:
+            int(economic_unit_code)
+            if id_:
+                uuid.UUID(id_)
+            if ids:
+                [uuid.UUID(id_) for id_ in ids]
+        except ValueError:
+            raise ValidationError("worker_voucher.validation.id_or_ids_invalid_format")
+
+        if not WorkerVoucherConfig.unassigned_voucher_enabled:
+            raise ValidationError("worker_voucher.validation.unassigned_voucher_disabled")
+
+        if type(user) is AnonymousUser or not user.id or not user.has_perms(
+                WorkerVoucherConfig.gql_worker_voucher_assign_vouchers_perms):
+            raise ValidationError("mutation.authentication_required")
+
+    @classmethod
+    def _mutate(cls, user, economic_unit_code: int, id_=None, ids=None, **_):
+        voucher_ids = []
+        if id_:
+            voucher_ids.append(id_)
+        if ids:
+            voucher_ids.extend(ids)
+        validated_vouchers = validate_unassign_vouchers(user, economic_unit_code, voucher_ids)
+        with transaction.atomic():
+            for voucher in validated_vouchers:
+                voucher_ids.append(unassign_voucher(user, voucher.id))
+        return None
+
+    class Input(UnassignVouchersMutationInput):
         pass
 
 

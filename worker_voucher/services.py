@@ -212,6 +212,12 @@ def validate_assign_vouchers(user: User, eu_code: str, workers: List[str], date_
             "extensions": e.extensions
         }
 
+
+def validate_unassign_vouchers(user, eu_code, ids: list[str]):
+    ph = _check_ph(user, eu_code)
+    return _check_assigned_vouchers(ph, ids)
+
+
 def _check_ph(user: User, eu_code: str):
     try:
         return PolicyHolder.objects.get(
@@ -239,7 +245,7 @@ def _check_insurees(workers: List[str], eu_code: str, user: User):
             )
         if ins in insurees:
             raise VoucherException(
-                message= "workerVoucher.validation.worker_duplicated",
+                message="workerVoucher.validation.worker_duplicated",
                 extensions={
                     "params": {"code": code}
                 }
@@ -294,6 +300,7 @@ def _check_dates(date_ranges: List[Dict]):
         raise VoucherException("workerVoucher.validation.validation.no_valid_dates")
     return dates
 
+
 def _get_voucher_expiry_date(start_date: datetime):
     expiry_type = WorkerVoucherConfig.voucher_expiry_type
 
@@ -332,11 +339,28 @@ def _check_unassigned_vouchers(ph, dates, count):
         assigned_date=None,
         expiry_date__gte=max(dates),
         policyholder=ph,
-        status=WorkerVoucher.Status.UNASSIGNED,
+        status__in=(WorkerVoucher.Status.UNASSIGNED, WorkerVoucher.Status.AWAITING_PAYMENT),
         is_deleted=False).order_by('expiry_date')[:count]
     if unassigned_vouchers.count() < count:
         raise VoucherException("workerVoucher.validation.not_enough_unassigned_vouchers")
     return unassigned_vouchers
+
+
+def _check_assigned_vouchers(ph, ids: list[str]):
+    #  Naive approach, all unassigned vouchers have to be valid for the whole range
+    #  instead of their respective assigned date
+    vouchers = WorkerVoucher.objects.filter(
+        id__in=ids,
+        # insuree=None,
+        # assigned_date=None,
+        # expiry_date__gte=max(dates),
+        policyholder=ph,
+        # status__in=(WorkerVoucher.Status.UNASSIGNED, WorkerVoucher.Status.AWAITING_PAYMENT),
+        # is_deleted=False
+    )
+    if vouchers.count() < len(ids):
+        raise VoucherException("workerVoucher.validation.not_all_voucers_can_be_unassigned")
+    return list(vouchers)
 
 
 def get_worker_yearly_voucher_count_counts(insuree: Insuree, user: User, year):
@@ -354,7 +378,7 @@ def get_worker_yearly_voucher_count_counts(insuree: Insuree, user: User, year):
 def create_assigned_voucher(user, date, insuree_id, policyholder_id):
     current_date = datetime.datetime.today()
     expiry_date = _get_voucher_expiry_date(current_date)
-    date_of_assignment  = timezone.now()
+    date_of_assignment = timezone.now()
 
     voucher_service = WorkerVoucherService(user)
     service_result = voucher_service.create({
@@ -399,6 +423,21 @@ def assign_voucher(user, insuree_id, voucher_id, assigned_date):
         "assigned_date": assigned_date,
         "date_of_assignment": date_of_assignment,
         "status": WorkerVoucher.Status.ASSIGNED
+    })
+    if service_result.get("success", True):
+        service_result.get("data").get("id")
+    else:
+        raise VoucherException(service_result["error"])
+
+
+def unassign_voucher(user, voucher_id):
+    # This service function does not check if the voucher is eligible to be unassigned
+    voucher_service = WorkerVoucherService(user)
+    service_result = voucher_service.update({
+        "id": voucher_id,
+        "assigned_date": None,
+        "date_of_assignment": None,
+        "status": WorkerVoucher.Status.UNASSIGNED
     })
     if service_result.get("success", True):
         service_result.get("data").get("id")
