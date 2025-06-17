@@ -361,10 +361,21 @@ class AcquireAssignedVouchersMutation(BaseMutation):
         pass
 
 
+class AssignVouchersWorkersDataInput(graphene.InputObjectType):
+    chf_id = graphene.ID(required=True)
+    start_time = graphene.Time(required=True)
+    end_time = graphene.Time(required=True)
+    work_place = graphene.String(required=True)
+    activity = graphene.String(required=True)
+    negotiated = graphene.Float(required=True)
+    paid = graphene.Float(required=True)
+
+
 class AssignVouchersMutationInput(OpenIMISMutation.Input):
     economic_unit_code = graphene.ID(required=True)
     date_ranges = graphene.List(DateRangeInclusiveInputType, required=True)
-    workers = graphene.List(graphene.ID, required=True)
+    workers = graphene.List(graphene.ID)
+    workers_data = graphene.List(AssignVouchersWorkersDataInput)
 
 
 class AssignVouchersMutation(BaseMutation):
@@ -382,9 +393,13 @@ class AssignVouchersMutation(BaseMutation):
             raise ValidationError("mutation.authentication_required")
 
     @classmethod
-    def _mutate(cls, user, count=None, economic_unit_code=None, workers=None, date_ranges=None, **data):
+    def _mutate(cls, user, count=None, economic_unit_code=None, workers=None, workers_data=None, date_ranges=None,
+                **data):
         data.pop('client_mutation_id', None)
         data.pop('client_mutation_label', None)
+
+        if not workers:
+            workers = [w['chf_id'] for w in workers_data]
 
         validate_result = validate_assign_vouchers(user, economic_unit_code, workers, date_ranges)
 
@@ -392,11 +407,17 @@ class AssignVouchersMutation(BaseMutation):
             return validate_result
         voucher_ids = []
         vouchers = validate_result.get("data").get("unassigned_vouchers")
+        insuree_dict = {insuree['chf_id']: insuree for insuree in workers_data}
+
         with transaction.atomic():
             for date in validate_result.get("data").get("dates"):
                 for insuree in validate_result.get("data").get("insurees"):
                     voucher = vouchers.pop(0)
-                    voucher_ids.append(assign_voucher(user, insuree.id, voucher.id, date))
+                    insuree_ = insuree_dict[insuree.chf_id]
+                    insuree_['insuree_id'] = insuree.id
+                    del insuree_['chf_id']
+                    res = assign_voucher(user, insuree_, voucher.id, date)
+                    voucher_ids.append(res)
         return None
 
     class Input(AssignVouchersMutationInput):
@@ -415,7 +436,8 @@ class UnassignVouchersMutation(BaseMutation):
     _model = WorkerVoucher
 
     @classmethod
-    def _validate_mutation(cls, user, economic_unit_code: int, id_: str | None = None, ids: list[str] | None = None,**_):
+    def _validate_mutation(cls, user, economic_unit_code: int, id_: str | None = None, ids: list[str] | None = None,
+                           **_):
         try:
             int(economic_unit_code)
             if id_:

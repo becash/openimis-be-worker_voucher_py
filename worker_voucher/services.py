@@ -412,17 +412,17 @@ def create_unassigned_voucher(user, policyholder_id):
         raise VoucherException(service_result["error"])
 
 
-def assign_voucher(user, insuree_id, voucher_id, assigned_date):
+def assign_voucher(user, insuree, voucher_id, assigned_date):
     # This service function does not check if the voucher is eligible to be assigned
     voucher_service = WorkerVoucherService(user)
     date_of_assignment = timezone.now()
 
     service_result = voucher_service.update({
         "id": voucher_id,
-        "insuree_id": insuree_id,
         "assigned_date": assigned_date,
         "date_of_assignment": date_of_assignment,
-        "status": WorkerVoucher.Status.ASSIGNED
+        "status": WorkerVoucher.Status.ASSIGNED,
+        **insuree
     })
     if service_result.get("success", True):
         service_result.get("data").get("id")

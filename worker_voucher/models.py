@@ -27,6 +27,13 @@ class WorkerVoucher(HistoryModel):
     expiry_date = fields.DateTimeField(blank=True, null=True)
     date_of_assignment = fields.DateTimeField(blank=True, null=True)
 
+    start_time = fields.TimeField(blank=True, null=True)
+    end_time = fields.TimeField(blank=True, null=True)
+    work_place = models.CharField(max_length=255, blank=True, null=True)
+    activity = models.CharField(max_length=255, blank=True, null=True)
+    negotiated = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    paid = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+
     @classmethod
     def get_queryset(cls, queryset, user):
         from worker_voucher.services import get_voucher_user_filters
@@ -82,10 +89,12 @@ class VoucherFormDraft(HistoryBusinessModel):
     class Type(models.TextChoices):
         ACQUIREMENT = 'ACQUIREMENT', _('acquirement')
         ASSIGNMENT = 'ASSIGNMENT', _('assignment')
+
     policyholder = models.ForeignKey(PolicyHolder, models.DO_NOTHING, null=False)
-    user = models.ForeignKey(User, on_delete=models.deletion.DO_NOTHING, null=False, related_name='%(class)s_user_voucher')
+    user = models.ForeignKey(User, on_delete=models.deletion.DO_NOTHING, null=False,
+                             related_name='%(class)s_user_voucher')
     type = models.CharField(max_length=255, blank=True, null=True, choices=Type.choices,
-                              default=Type.ASSIGNMENT)
+                            default=Type.ASSIGNMENT)
 
 
 class VoucherFormDraftWorkersDetails(HistoryBusinessModel):
