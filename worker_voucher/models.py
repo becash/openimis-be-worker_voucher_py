@@ -31,8 +31,8 @@ class WorkerVoucher(HistoryModel):
     end_time = fields.TimeField(blank=True, null=True)
     work_place = models.CharField(max_length=255, blank=True, null=True)
     activity = models.CharField(max_length=255, blank=True, null=True)
-    negotiated = models.DecimalField(max_digits=6, decimal_places=2,blank=True, null=True)
-    paid = models.DecimalField(max_digits=6, decimal_places=2,blank=True, null=True)
+    negotiated = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    paid = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
 
     @classmethod
     def get_queryset(cls, queryset, user):
