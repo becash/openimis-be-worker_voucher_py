@@ -172,6 +172,12 @@ class CreateWorkerVoucherInput(OpenIMISMutation.Input):
     insuree_id = graphene.Int(required=True)
     policyholder_id = graphene.ID(required=True)
     json_ext = graphene.types.json.JSONString(required=False)
+    start_time = graphene.Time()
+    end_time = graphene.Time()
+    work_place = graphene.String()
+    activity = graphene.String()
+    negotiated = graphene.Float()
+    paid = graphene.Float()
 
 
 class UpdateWorkerVoucherInput(CreateWorkerVoucherInput):
