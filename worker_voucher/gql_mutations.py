@@ -180,8 +180,20 @@ class CreateWorkerVoucherInput(OpenIMISMutation.Input):
     paid = graphene.Float()
 
 
-class UpdateWorkerVoucherInput(CreateWorkerVoucherInput):
+class UpdateWorkerVoucherInput(OpenIMISMutation.Input):
     id = graphene.ID(required=True)
+    code = graphene.String(max_length=255)
+    status = graphene.String(max_length=255)
+    assigned_date = graphene.Date()
+    expiry_date = graphene.Date()
+    insuree_id = graphene.Int()
+    json_ext = graphene.types.json.JSONString()
+    start_time = graphene.Time()
+    end_time = graphene.Time()
+    work_place = graphene.String()
+    activity = graphene.String()
+    negotiated = graphene.Float()
+    paid = graphene.Float()
 
 
 class CreateWorkerVoucherMutation(BaseMutation):
