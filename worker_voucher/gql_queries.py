@@ -20,6 +20,7 @@ from worker_voucher.services import get_worker_yearly_voucher_count_counts
 
 class WorkerGQLType(InsureeGQLType):
     vouchers_this_year = graphene.JSONString()
+    regular_id = graphene.Int(source="id")  # This adds an alias field that returns raw ID
 
     def resolve_vouchers_this_year(self, info):
         return get_worker_yearly_voucher_count_counts(self.id, info.context.user, datetime.date.today().year)
@@ -44,14 +45,14 @@ class WorkerGQLType(InsureeGQLType):
             **prefix_filterset("photo__", PhotoGQLType._meta.filter_fields),
             "photo": ["isnull"],
             "family": ["isnull"],
-            **prefix_filterset("gender__", GenderGQLType._meta.filter_fields)
+            **prefix_filterset("gender__", GenderGQLType._meta.filter_fields),
         }
         interfaces = (graphene.relay.Node,)
         connection_class = ExtendedConnection
 
 
 class WorkerVoucherGQLType(DjangoObjectType):
-    uuid = graphene.String(source='uuid')
+    uuid = graphene.String(source="uuid")
     date_updated_as_date = graphene.String()
     bill_id = graphene.UUID()
     date_of_assignment = graphene.DateTime()
@@ -61,16 +62,13 @@ class WorkerVoucherGQLType(DjangoObjectType):
         interfaces = (graphene.relay.Node,)
         filter_fields = {
             "id": ["exact"],
-
             "code": ["exact", "iexact", "istartswith", "icontains"],
             "status": ["exact", "iexact", "istartswith", "icontains"],
             "assigned_date": ["exact", "lt", "lte", "gt", "gte"],
             "expiry_date": ["exact", "lt", "lte", "gt", "gte"],
             "date_of_assignment": ["exact", "lt", "lte", "gt", "gte"],
-
             **prefix_filterset("insuree__", InsureeGQLType._meta.filter_fields),
             **prefix_filterset("policyholder__", PolicyHolderGQLType._meta.filter_fields),
-
             "date_created": ["exact", "lt", "lte", "gt", "gte"],
             "date_updated": ["exact", "lt", "lte", "gt", "gte"],
             "is_deleted": ["exact"],
@@ -82,9 +80,11 @@ class WorkerVoucherGQLType(DjangoObjectType):
         return self.date_updated.to_ad_date()
 
     def resolve_bill_id(self, info, **kwargs):
-        bill = Bill.objects.filter(line_items_bill__line_id=self.id,
-                                   line_items_bill__is_deleted=False,
-                                   is_deleted=False).first()
+        bill = Bill.objects.filter(
+            line_items_bill__line_id=self.id,
+            line_items_bill__is_deleted=False,
+            is_deleted=False,
+        ).first()
         if bill:
             return bill.id
 
@@ -105,7 +105,7 @@ class OnlineWorkerDataGQLType(graphene.ObjectType):
 
 
 class GroupOfWorkerGQLType(DjangoObjectType):
-    uuid = graphene.String(source='uuid')
+    uuid = graphene.String(source="uuid")
 
     class Meta:
         model = GroupOfWorker
@@ -114,7 +114,6 @@ class GroupOfWorkerGQLType(DjangoObjectType):
             "id": ["exact"],
             "name": ["exact", "istartswith", "icontains", "iexact"],
             **prefix_filterset("policyholder__", PolicyHolderGQLType._meta.filter_fields),
-
             "date_created": ["exact", "lt", "lte", "gt", "gte"],
             "date_updated": ["exact", "lt", "lte", "gt", "gte"],
             "is_deleted": ["exact"],
@@ -123,7 +122,7 @@ class GroupOfWorkerGQLType(DjangoObjectType):
 
 
 class WorkerGroupGQLType(DjangoObjectType):
-    uuid = graphene.String(source='uuid')
+    uuid = graphene.String(source="uuid")
 
     class Meta:
         model = WorkerGroup
@@ -132,7 +131,6 @@ class WorkerGroupGQLType(DjangoObjectType):
             "id": ["exact"],
             "insuree_id": ["exact"],
             **prefix_filterset("group__", GroupOfWorkerGQLType._meta.filter_fields),
-
             "date_created": ["exact", "lt", "lte", "gt", "gte"],
             "date_updated": ["exact", "lt", "lte", "gt", "gte"],
             "is_deleted": ["exact"],
@@ -165,7 +163,7 @@ class WorkersType(graphene.ObjectType):
 
 
 class VoucherFormDraftGQLType(DjangoObjectType):
-    uuid = graphene.String(source='uuid')
+    uuid = graphene.String(source="uuid")
     workers = graphene.List(WorkersType)
     date_ranges = graphene.List(DateRangeType)
 
@@ -177,7 +175,6 @@ class VoucherFormDraftGQLType(DjangoObjectType):
             **prefix_filterset("user__", UserGQLType._meta.filter_fields),
             **prefix_filterset("policyholder__", PolicyHolderGQLType._meta.filter_fields),
             "type": ["exact", "istartswith", "icontains", "iexact"],
-
             "date_created": ["exact", "lt", "lte", "gt", "gte"],
             "date_updated": ["exact", "lt", "lte", "gt", "gte"],
             "is_deleted": ["exact"],
@@ -185,37 +182,36 @@ class VoucherFormDraftGQLType(DjangoObjectType):
         connection_class = ExtendedConnection
 
     def resolve_workers(self, info):
-        workers = VoucherFormDraftWorkersDetails.objects.filter(
-            voucher_form_draft=self
-        ).values(
-            'insuree__chf_id',
-            'insuree__id',
-            'insuree__uuid',
-            'insuree__dob',
-            'insuree__last_name',
-            'insuree__other_names',
+        workers = VoucherFormDraftWorkersDetails.objects.filter(voucher_form_draft=self).values(
+            "insuree__chf_id",
+            "insuree__id",
+            "insuree__uuid",
+            "insuree__dob",
+            "insuree__last_name",
+            "insuree__other_names",
         )
         return [
             WorkersType(
-                id=worker['insuree__id'],
-                uuid=worker['insuree__uuid'],
-                chf_id=worker['insuree__chf_id'],
-                last_name=worker['insuree__last_name'],
-                other_names=worker['insuree__other_names'],
-                dob=worker['insuree__dob'],
+                id=worker["insuree__id"],
+                uuid=worker["insuree__uuid"],
+                chf_id=worker["insuree__chf_id"],
+                last_name=worker["insuree__last_name"],
+                other_names=worker["insuree__other_names"],
+                dob=worker["insuree__dob"],
             )
-            for worker in workers]
+            for worker in workers
+        ]
 
     # Resolver for date_ranges
     def resolve_date_ranges(self, info):
-        date_ranges = VoucherFormDraftDateRangesDetails.objects.filter(
-            voucher_form_draft=self
-        ).values('start_date', 'end_date')
-        return [DateRangeType(start_date=dr['start_date'], end_date=dr['end_date']) for dr in date_ranges]
+        date_ranges = VoucherFormDraftDateRangesDetails.objects.filter(voucher_form_draft=self).values(
+            "start_date", "end_date"
+        )
+        return [DateRangeType(start_date=dr["start_date"], end_date=dr["end_date"]) for dr in date_ranges]
 
 
 class VoucherFormDraftWorkerDetailsGQLType(DjangoObjectType):
-    uuid = graphene.String(source='uuid')
+    uuid = graphene.String(source="uuid")
 
     class Meta:
         model = VoucherFormDraftWorkersDetails
@@ -224,7 +220,6 @@ class VoucherFormDraftWorkerDetailsGQLType(DjangoObjectType):
             "id": ["exact"],
             "insuree_id": ["exact"],
             **prefix_filterset("voucher_form_draft__", VoucherFormDraftGQLType._meta.filter_fields),
-
             "date_created": ["exact", "lt", "lte", "gt", "gte"],
             "date_updated": ["exact", "lt", "lte", "gt", "gte"],
             "is_deleted": ["exact"],
@@ -233,7 +228,7 @@ class VoucherFormDraftWorkerDetailsGQLType(DjangoObjectType):
 
 
 class VoucherFormDraftDateRangesDetailsGQLType(DjangoObjectType):
-    uuid = graphene.String(source='uuid')
+    uuid = graphene.String(source="uuid")
 
     class Meta:
         model = VoucherFormDraftDateRangesDetails
@@ -241,7 +236,6 @@ class VoucherFormDraftDateRangesDetailsGQLType(DjangoObjectType):
         filter_fields = {
             "id": ["exact"],
             **prefix_filterset("voucher_form_draft__", VoucherFormDraftGQLType._meta.filter_fields),
-
             "start_date": ["exact", "lt", "lte", "gt", "gte"],
             "end_date": ["exact", "lt", "lte", "gt", "gte"],
             "date_created": ["exact", "lt", "lte", "gt", "gte"],
