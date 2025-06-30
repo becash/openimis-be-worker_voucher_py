@@ -322,16 +322,17 @@ def check_existing_active_vouchers(ph, insurees, dates):
     else:
         date_filter = {'assigned_date__gte': dates}
 
-    existing_vouchers =  WorkerVoucher.objects.filter(
-            insuree__in=insurees,
-            policyholder=ph,
-            status__in=(WorkerVoucher.Status.ASSIGNED, WorkerVoucher.Status.AWAITING_PAYMENT),
-            is_deleted=False,
+    existing_vouchers = WorkerVoucher.objects.filter(
+        insuree__in=insurees,
+        policyholder=ph,
+        status__in=(WorkerVoucher.Status.ASSIGNED, WorkerVoucher.Status.AWAITING_PAYMENT),
+        is_deleted=False,
         **date_filter
     )
     if existing_vouchers.count() > 0:
         raise VoucherException("workerVoucher.validation.existing_active_vouchers",
-                               extensions={"existing_vouchers": [str(w.insuree) for w in existing_vouchers]}
+                               extensions={"existing_vouchers": [f"{w.assigned_date.date()} - {w.insuree}" for w in
+                                                                 existing_vouchers]}
                                )
 
 
