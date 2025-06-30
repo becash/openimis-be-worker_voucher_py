@@ -245,8 +245,11 @@ class UpdateWorkerVoucherMutation(BaseMutation):
 
     @classmethod
     def _validate_mutation(cls, user, **data):
-        if type(user) is AnonymousUser or not user.id or not user.has_perms(
-                WorkerVoucherConfig.gql_worker_voucher_update_perms):
+        if (
+            type(user) is AnonymousUser
+            or not user.id
+            # or not user.has_perms(WorkerVoucherConfig.gql_worker_voucher_create_perms)
+        ):
             raise ValidationError("mutation.authentication_required")
 
     @classmethod
