@@ -35,7 +35,7 @@ from worker_voucher.services import (
     economic_unit_user_filter,
     worker_user_filter,
     get_group_worker_user_filters,
-    get_draft_voucher_user_filters,
+    get_draft_voucher_user_filters, VoucherException,
 )
 
 logger = logging.getLogger(__name__)
@@ -191,6 +191,8 @@ class Query(ExportableQueryMixin, graphene.ObjectType):
 
         validation_result = validate_acquire_assigned_vouchers(info.context.user, economic_unit_code, workers,
                                                                date_ranges)
+        if validation_result.get("error") == 'workerVoucher.validation.existing_active_vouchers':
+            raise VoucherException(validation_result.get("error", _("Unknown Error")),extensions=validation_result.get('extensions'))
 
         if not validation_result.get("success", False):
             raise AttributeError(validation_result.get("error", _("Unknown Error")))
