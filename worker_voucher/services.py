@@ -192,14 +192,15 @@ def validate_assign_vouchers(user: User, eu_code: str, workers: List[str], date_
                 _check_voucher_limit(insuree, user, ph, year, count)
         check_existing_active_vouchers(ph, insurees, dates)
         count = insurees_count * vouchers_per_insuree_count
-        unassigned_vouchers = _check_unassigned_vouchers(ph, dates, count)
+        # unassigned_vouchers = _check_unassigned_vouchers(ph, dates, count)
         return {
             "success": True,
             "data": {
                 "policyholder": ph,
                 "insurees": insurees,
                 "dates": dates,
-                "unassigned_vouchers": list(unassigned_vouchers),
+                "unassigned_vouchers": [],
+                # "unassigned_vouchers": list(unassigned_vouchers),
                 "count": count,
                 "price_per_voucher": Decimal("0"),
                 "price": Decimal("0")
@@ -321,14 +322,17 @@ def check_existing_active_vouchers(ph, insurees, dates):
     else:
         date_filter = {'assigned_date__gte': dates}
 
-    if WorkerVoucher.objects.filter(
+    existing_vouchers =  WorkerVoucher.objects.filter(
             insuree__in=insurees,
             policyholder=ph,
             status__in=(WorkerVoucher.Status.ASSIGNED, WorkerVoucher.Status.AWAITING_PAYMENT),
             is_deleted=False,
-            **date_filter
-    ).exists():
-        raise VoucherException("workerVoucher.validation.existing_active_vouchers")
+        **date_filter
+    )
+    if existing_vouchers.count() > 0:
+        raise VoucherException("workerVoucher.validation.existing_active_vouchers",
+                               extensions={"existing_vouchers": [str(w.insuree) for w in existing_vouchers]}
+                               )
 
 
 def _check_unassigned_vouchers(ph, dates, count):
