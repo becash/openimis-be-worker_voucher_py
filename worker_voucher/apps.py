@@ -21,24 +21,20 @@ DEFAULT_CONFIG = {
     "price_per_voucher": os.getenv("PRICE_PER_VOUCHER", "50.00"),
     "max_generic_vouchers": 1000,
     #  This fileds should be a valid datetimedelata input
-    "voucher_bill_due_period": {
-        "days": 14
-    },
-    "voucher_expiry_period": {
-        "months": 1
-    },
+    "voucher_bill_due_period": {"days": 14},
+    "voucher_expiry_period": {"months": 1},
     # voucher_expiry_type = "fixed_period" or "end_of_year"
     "voucher_expiry_type": "end_of_year",
     "yearly_worker_voucher_limit": 120,
     "validate_created_worker_online": False,
     "csv_worker_upload_errors_column": "errors",
-    "worker_upload_chf_id_type": "national_id"
+    "worker_upload_chf_id_type": "national_id",
 }
 
 
 class WorkerVoucherConfig(AppConfig, ConfigUtilMixin):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'worker_voucher'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "worker_voucher"
 
     gql_worker_voucher_search_perms = None
     gql_worker_voucher_create_perms = None
@@ -76,4 +72,3 @@ class WorkerVoucherConfig(AppConfig, ConfigUtilMixin):
         if file_name:
             return f"csv_worker_upload/economic_unit_{economic_unit_code}/{file_name}"
         return f"csv_worker_upload/economic_unit_{economic_unit_code}"
-
