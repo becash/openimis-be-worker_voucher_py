@@ -430,7 +430,7 @@ class AssignVouchersMutation(BaseMutation):
     _model = WorkerVoucher
 
     @classmethod
-    def _validate_mutation(cls, user, **data):
+    def _validate_mutation(cls, user,workers_data=None, **data):
         if not WorkerVoucherConfig.unassigned_voucher_enabled:
             raise ValidationError("worker_voucher.validation.unassigned_voucher_disabled")
 
@@ -440,6 +440,9 @@ class AssignVouchersMutation(BaseMutation):
             or not user.has_perms(WorkerVoucherConfig.gql_worker_voucher_assign_vouchers_perms)
         ):
             raise ValidationError("mutation.authentication_required")
+
+        if not workers_data:
+            raise ValidationError("mutation.workers_data_required")
 
     @classmethod
     def _mutate(
@@ -456,17 +459,18 @@ class AssignVouchersMutation(BaseMutation):
         if not validate_result.get("success", False):
             return validate_result
         voucher_ids = []
-        vouchers = validate_result.get("data").get("unassigned_vouchers")
+        # vouchers = validate_result.get("data").get("unassigned_vouchers")
         insuree_dict = {insuree["chf_id"]: insuree for insuree in workers_data}
-
         with transaction.atomic():
             for date in validate_result.get("data").get("dates"):
                 for insuree in validate_result.get("data").get("insurees"):
-                    voucher = vouchers.pop(0)
+                    # voucher = vouchers.pop(0)
                     insuree_ = insuree_dict[insuree.chf_id]
                     insuree_["insuree_id"] = insuree.id
-                    del insuree_["chf_id"]
-                    res = assign_voucher(user, insuree_, voucher.id, date)
+                    # del insuree_["chf_id"]
+                    policyholder_id = validate_result.get("data").get("policyholder").id
+                    voucher_id =  create_unassigned_voucher(user, policyholder_id)
+                    res = assign_voucher(user, insuree_, voucher_id, date)
                     voucher_ids.append(res)
         return None
 
