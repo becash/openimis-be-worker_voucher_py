@@ -442,7 +442,7 @@ def unassign_voucher(user, voucher_id):
         "id": voucher_id,
         "assigned_date": None,
         "date_of_assignment": None,
-        "status": WorkerVoucher.Status.UNASSIGNED
+        "status": WorkerVoucher.Status.CANCELED
     })
     if service_result.get("success", True):
         service_result.get("data").get("id")
