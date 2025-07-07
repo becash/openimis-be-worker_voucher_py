@@ -49,7 +49,8 @@ class Query(ExportableQueryMixin, graphene.ObjectType):
         WorkerGQLType,
         orderBy=graphene.List(of_type=graphene.String),
         client_mutation_id=graphene.String(),
-        economic_unit_code=graphene.String()
+        economic_unit_code=graphene.String(),
+        id=graphene.Int()
     )
 
     worker_voucher = OrderedDjangoFilterConnectionField(
@@ -115,9 +116,12 @@ class Query(ExportableQueryMixin, graphene.ObjectType):
         client_mutation_id=graphene.String(),
     )
 
-    def resolve_worker(self, info, client_mutation_id=None, economic_unit_code=None, **kwargs):
+    def resolve_worker(self, info, client_mutation_id=None, economic_unit_code=None,id=None, **kwargs):
         Query._check_permissions(info.context.user, InsureeConfig.gql_query_insurees_perms)
         filters = filter_validity(**kwargs)
+
+        if id:
+            filters.append(Q(id=id))
 
         if client_mutation_id:
             filters.append(Q(mutations__mutation__client_mutation_id=client_mutation_id))
