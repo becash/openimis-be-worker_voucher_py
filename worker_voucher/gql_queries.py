@@ -160,6 +160,7 @@ class WorkersType(graphene.ObjectType):
     last_name = graphene.String()
     other_names = graphene.String()
     dob = graphene.Date()
+    regular_id = graphene.Int(source="id")
 
 
 class VoucherFormDraftGQLType(DjangoObjectType):

@@ -22,7 +22,6 @@ from core.services.utils import (
     output_result_success
 )
 from core.signals import register_service_signal
-from graphql import GraphQLError
 from insuree.models import Insuree
 from insuree.gql_mutations import update_or_create_insuree
 from invoice.models import Bill
