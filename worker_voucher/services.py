@@ -449,6 +449,17 @@ def unassign_voucher(user, voucher_id):
         raise VoucherException(service_result["error"])
 
 
+def get_voucher_tax_percent(negotiated: Decimal, cnas: Decimal, fisc: Decimal)->tuple[Decimal,Decimal]:
+    cnas_amount = Decimal(str(negotiated)) * Decimal('0.06')
+    cnas_amount = cnas_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    cnas += cnas_amount
+
+    fisc_amount = Decimal(str(negotiated)) * Decimal('0.12')
+    fisc_amount = fisc_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    fisc += fisc_amount
+    return cnas,fisc
+
+
 def create_voucher_bill(user, voucher_ids, policyholder_id):
     bill_due_period = WorkerVoucherConfig.voucher_bill_due_period
 
@@ -461,22 +472,33 @@ def create_voucher_bill(user, voucher_ids, policyholder_id):
     }
 
     bill_data_line = []
+    cnas = Decimal(0)
+    fisc = Decimal(0)
+
+    for v_id in voucher_ids:
+        cnas,fisc = get_voucher_tax_percent(WorkerVoucher.objects.get(id=v_id).negotiated, cnas, fisc)
 
     with transaction.atomic():
-        for voucher_id in voucher_ids:
-            voucher = WorkerVoucher.objects.get(id=voucher_id)
-            price = voucher.negotiated * Decimal(0.18)
-            price = price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            bill_data_line.append({
-                "code": str(uuid4()),
-                "description": f"Voucher {voucher.code}",
-                "line_type": "workervoucher",
-                "line_id": voucher_id,
-                "quantity": 1,
-                "unit_price": price,
-                "amount_net": price,
-                "amount_total": price,
-            })
+        bill_data_line.append({
+            "code": str(uuid4()),
+            "description": f"Bugetul Asigurărilor Sociale de Stat 6%",
+            "line_type": "workervoucher",
+            # "line_id": voucher_id,
+            "quantity": 1,
+            "unit_price": cnas,
+            "amount_net": cnas,
+            "amount_total": cnas,
+        })
+        bill_data_line.append({
+            "code": str(uuid4()),
+            "description": f"Bugetul de Stat 12%",
+            "line_type": "workervoucher",
+            # "line_id": voucher_id,
+            "quantity": 1,
+            "unit_price": fisc,
+            "amount_net": fisc,
+            "amount_total": fisc,
+        })
 
         bill_create_payload = {
             "user": user,
