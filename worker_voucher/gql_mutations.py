@@ -189,7 +189,7 @@ class CreateWorkerVoucherInput(OpenIMISMutation.Input):
     end_time = graphene.Time()
     work_place = graphene.String()
     activity = graphene.String()
-    negotiated = graphene.Float()
+    negotiated = graphene.Float(required=True)
     paid = graphene.Float()
 
 
@@ -205,7 +205,7 @@ class UpdateWorkerVoucherInput(OpenIMISMutation.Input):
     end_time = graphene.Time()
     work_place = graphene.String()
     activity = graphene.String()
-    negotiated = graphene.Float()
+    negotiated = graphene.Float(required=True)
     paid = graphene.Float()
 
 
@@ -444,6 +444,9 @@ class AssignVouchersMutation(BaseMutation):
         if not workers_data:
             raise ValidationError("mutation.workers_data_required")
 
+        if [w for w in workers_data if w['negotiated']<=0]:
+            raise ValidationError("mutation.negotiated_cannot_be_0")
+
     @classmethod
     def _mutate(
         cls, user, count=None, economic_unit_code=None, workers=None, workers_data=None, date_ranges=None, **data
@@ -459,7 +462,6 @@ class AssignVouchersMutation(BaseMutation):
         if not validate_result.get("success", False):
             return validate_result
         voucher_ids = []
-        # vouchers = validate_result.get("data").get("unassigned_vouchers")
         insuree_dict = {insuree["chf_id"]: insuree for insuree in workers_data}
         with transaction.atomic():
             for date in validate_result.get("data").get("dates"):
