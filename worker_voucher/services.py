@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 import uuid
 from io import BytesIO
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Iterable, Dict, Union, List
 from uuid import uuid4
 
@@ -465,7 +465,8 @@ def create_voucher_bill(user, voucher_ids, policyholder_id):
     with transaction.atomic():
         for voucher_id in voucher_ids:
             voucher = WorkerVoucher.objects.get(id=voucher_id)
-            price = Decimal(WorkerVoucherConfig.price_per_voucher)
+            price = voucher.negotiated * Decimal(0.18)
+            price = price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             bill_data_line.append({
                 "code": str(uuid4()),
                 "description": f"Voucher {voucher.code}",
