@@ -460,7 +460,7 @@ def get_voucher_tax_percent(negotiated: Decimal, cnas: Decimal, fisc: Decimal)->
     return cnas,fisc
 
 
-def create_voucher_bill(user, voucher_ids, policyholder_id):
+def create_voucher_bill(user, voucher_ids, policyholder_id, month, year):
     bill_due_period = WorkerVoucherConfig.voucher_bill_due_period
 
     bill_data = {
@@ -468,7 +468,9 @@ def create_voucher_bill(user, voucher_ids, policyholder_id):
         'subject_id': policyholder_id,
         'code': str(uuid4()),
         'status': Bill.Status.VALIDATED,
-        'date_due': datetime.datetime.now() + datetime.datetimedelta(**bill_due_period)
+        'date_due': datetime.datetime.now() + datetime.datetimedelta(**bill_due_period),
+        "month":month,
+        "year":year,
     }
 
     bill_data_line = []
