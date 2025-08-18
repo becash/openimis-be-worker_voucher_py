@@ -478,7 +478,11 @@ def create_voucher_bill(user, voucher_ids, policyholder_id, month, year):
     fisc = Decimal(0)
 
     for v_id in voucher_ids:
-        cnas,fisc = get_voucher_tax_percent(WorkerVoucher.objects.get(id=v_id).negotiated, cnas, fisc)
+        voucher = WorkerVoucher.objects.get(id=v_id)
+        cnas,fisc = get_voucher_tax_percent(voucher.negotiated, cnas, fisc)
+        voucher.bill_code = bill_data["code"]
+        voucher.save(user=user)
+
 
     with transaction.atomic():
         bill_data_line.append({
